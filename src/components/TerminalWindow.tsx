@@ -4,19 +4,23 @@ import {
   useVideoConfig,
   interpolate,
   spring,
-  Easing,
 } from "remotion";
 
-type CodeLine = {
+export type CodeLine = {
   text: string;
   type?: "comment" | "keyword" | "string" | "function" | "default" | "output";
 };
 
-type TerminalWindowProps = {
+export type TerminalWindowProps = {
   title?: string;
   lines?: CodeLine[];
   accentColor?: string;
   typingSpeed?: number; // frames per character
+  fontSize?: number;
+  minHeight?: number;
+  delayFrames?: number;
+  style?: React.CSSProperties;
+  showLineNumbers?: boolean;
 };
 
 const TOKEN_COLORS = {
@@ -49,31 +53,37 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
   lines = DEFAULT_LINES,
   accentColor = "#00f5c4",
   typingSpeed = 2,
+  fontSize = 15,
+  minHeight = 240,
+  delayFrames = 0,
+  style,
+  showLineNumbers = true,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  const adjustedFrame = Math.max(0, frame - delayFrames);
+
   // Window entrance
   const entranceProgress = spring({
-    frame,
+    frame: adjustedFrame,
     fps,
     config: { damping: 20, stiffness: 100, mass: 0.8 },
     durationInFrames: 35,
   });
 
-  const translateY = interpolate(entranceProgress, [0, 1], [80, 0]);
+  const translateY = interpolate(entranceProgress, [0, 1], [60, 0]);
   const opacity = interpolate(entranceProgress, [0, 1], [0, 1]);
 
   // Calculate how many characters to show (typewriter effect)
-  const totalChars = lines.reduce((acc, line) => acc + line.text.length + 1, 0);
-  const startDelay = 20; // frames before typing starts
+  const startDelay = 15; // frames after entrance before typing starts
   const charsVisible = Math.max(
     0,
-    Math.floor((frame - startDelay) / typingSpeed)
+    Math.floor((adjustedFrame - startDelay) / Math.max(1, typingSpeed))
   );
 
   // Cursor blink
-  const cursorVisible = Math.floor(frame / 18) % 2 === 0;
+  const cursorVisible = Math.floor(frame / 16) % 2 === 0;
 
   // Render lines with typewriter
   let charCount = 0;
@@ -100,30 +110,32 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
         style={{
           display: "flex",
           alignItems: "center",
-          minHeight: 26,
+          minHeight: fontSize + 10,
         }}
       >
         {/* Line number */}
-        <span
-          style={{
-            color: "rgba(255,255,255,0.2)",
-            fontSize: 13,
-            fontFamily: "'Courier New', monospace",
-            width: 32,
-            textAlign: "right",
-            marginRight: 20,
-            userSelect: "none",
-            flexShrink: 0,
-          }}
-        >
-          {lineIndex + 1}
-        </span>
+        {showLineNumbers && (
+          <span
+            style={{
+              color: "rgba(255,255,255,0.22)",
+              fontSize: Math.max(11, fontSize - 2),
+              fontFamily: "'Courier New', monospace",
+              width: 28,
+              textAlign: "right",
+              marginRight: 16,
+              userSelect: "none",
+              flexShrink: 0,
+            }}
+          >
+            {lineIndex + 1}
+          </span>
+        )}
 
         {/* Code text */}
         <span
           style={{
             color,
-            fontSize: 15,
+            fontSize,
             fontFamily: "'Courier New', 'Fira Code', monospace",
             letterSpacing: 0.3,
             whiteSpace: "pre",
@@ -137,12 +149,12 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
             <span
               style={{
                 display: "inline-block",
-                width: 9,
-                height: 16,
+                width: 8,
+                height: fontSize + 1,
                 background: accentColor,
-                marginLeft: 1,
+                marginLeft: 2,
                 verticalAlign: "middle",
-                boxShadow: `0 0 6px ${accentColor}`,
+                boxShadow: `0 0 8px ${accentColor}`,
               }}
             />
           )}
@@ -157,18 +169,19 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
         transform: `translateY(${translateY}px)`,
         opacity,
         width: "100%",
-        padding: "0 48px",
         boxSizing: "border-box",
+        ...style,
       }}
     >
       {/* Window chrome */}
       <div
         style={{
-          background: "#161b22",
-          borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(18, 22, 30, 0.95)",
+          backdropFilter: "blur(20px)",
+          borderRadius: 14,
+          border: "1px solid rgba(255,255,255,0.12)",
           overflow: "hidden",
-          boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), 0 0 40px ${accentColor}15`,
+          boxShadow: `0 24px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04), 0 0 35px ${accentColor}18`,
         }}
       >
         {/* Title bar */}
@@ -176,10 +189,10 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "14px 18px",
+            padding: "12px 16px",
             background: "#0d1117",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-            gap: 12,
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            gap: 10,
           }}
         >
           {/* Traffic lights */}
@@ -187,11 +200,11 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
             <div
               key={i}
               style={{
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
                 borderRadius: "50%",
                 background: color,
-                opacity: 0.85,
+                opacity: 0.9,
               }}
             />
           ))}
@@ -203,7 +216,7 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
               textAlign: "center",
               fontFamily: "'Courier New', monospace",
               fontSize: 12,
-              color: "rgba(255,255,255,0.35)",
+              color: "rgba(255,255,255,0.45)",
               letterSpacing: 1,
             }}
           >
@@ -213,8 +226,8 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
           {/* Accent dot */}
           <div
             style={{
-              width: 8,
-              height: 8,
+              width: 7,
+              height: 7,
               borderRadius: "50%",
               background: accentColor,
               boxShadow: `0 0 6px ${accentColor}`,
@@ -226,8 +239,9 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
         {/* Code body */}
         <div
           style={{
-            padding: "20px 0 24px 0",
-            minHeight: 260,
+            padding: "16px 20px 20px 20px",
+            minHeight,
+            boxSizing: "border-box",
           }}
         >
           {renderedLines}

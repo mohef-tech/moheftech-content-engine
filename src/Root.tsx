@@ -3,6 +3,7 @@ import { Composition } from "remotion";
 import { TextHook } from "./components/TextHook";
 import { BRollFrame } from "./components/BRollFrame";
 import { TerminalWindow } from "./components/TerminalWindow";
+import { Video01_Positioning } from "./compositions/Video01_Positioning";
 
 // ─── Canvas Settings ──────────────────────────────────────────
 const CANVAS_WIDTH = 1080;
@@ -91,6 +92,17 @@ export const SceneTerminal: React.FC = () => (
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* ── Video 01: Positioning Personal Brand (30s @ 30fps = 900 frames) ── */}
+      <Composition
+        id="Video01-Positioning"
+        component={Video01_Positioning}
+        durationInFrames={900}
+        fps={FPS}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+      />
+
+      {/* ── Legacy / Component Previews ── */}
       <Composition
         id="TextHook"
         component={SceneTextHook}
